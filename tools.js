@@ -8,7 +8,6 @@ const openai = new OpenAI({
 });
 
 async function taylorSwiftFacts({ query }) {
-  console.log("TOOL USE. Query: ", query);
   const embedding = await openai.embeddings.create({
     model: "text-embedding-3-small",
     input: query,
@@ -19,7 +18,6 @@ async function taylorSwiftFacts({ query }) {
     { sort: { $vector: embedding.data[0].embedding }, limit: 10 }
   );
   const result = (await docs.toArray()).map((doc) => doc.text).join("\n");
-  console.log(result);
   return result;
 }
 
