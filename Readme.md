@@ -1,10 +1,10 @@
 #  Speech Assistant with Twilio Voice and the OpenAI Realtime API (Node.js)
 
-This application demonstrates how to use Node.js, [Twilio Voice](https://www.twilio.com/docs/voice) and [Media Streams](https://www.twilio.com/docs/voice/media-streams), and [OpenAI's Realtime API](https://platform.openai.com/docs/) to make a phone call to speak with an AI Assistant. 
+This application demonstrates how to use Node.js, [Twilio Voice](https://www.twilio.com/docs/voice) and [Media Streams](https://www.twilio.com/docs/voice/media-streams), [OpenAI's Realtime API](https://platform.openai.com/docs/), and [Astra DB](https://www.datastax.com/products/datastax-astra) to make a phone call to speak with a RAG-powered AI Assistant. 
 
-The application opens websockets with the OpenAI Realtime API and Twilio, and sends voice audio from one to the other to enable a two-way conversation.
+The application opens websockets with the OpenAI Realtime API and Twilio, and sends voice audio from one to the other to enable a two-way conversation. It uses Astra DB as an agent tool to search for relevant documents that can help answer questions accurately.
 
-See [here](https://www.twilio.com/en-us/blog/voice-ai-assistant-openai-realtime-api-node) for a tutorial overview of the code.
+See [here](https://www.twilio.com/en-us/blog/voice-ai-assistant-openai-realtime-api-node) for a tutorial overview of the code. 
 
 This application uses the following Twilio products in conjuction with OpenAI's Realtime API:
 - Voice (and TwiML, Media Streams)
@@ -22,14 +22,16 @@ To use the app, you will  need:
 - **A Twilio number with _Voice_ capabilities.** [Here are instructions](https://help.twilio.com/articles/223135247-How-to-Search-for-and-Buy-a-Twilio-Phone-Number-from-Console) to purchase a phone number.
 - **An OpenAI account and an OpenAI API Key.** You can sign up [here](https://platform.openai.com/).
   - **OpenAI Realtime API access.**
+- **A DataStax Account.** You can [sign up for a free DataStax account here](https://astra.datastax.com/signup).
 
 ## Local Setup
 
-There are 4 required steps to get the app up-and-running locally for development and testing:
+There are 5 required steps to get the app up-and-running locally for development and testing:
 1. Run ngrok or another tunneling solution to expose your local server to the internet for testing. Download ngrok [here](https://ngrok.com/).
-2. Install the packages
+2. Install required packages
 3. Twilio setup
-4. Update the .env file
+4. Astra DB setup
+5. Update the .env file
 
 ### Open an ngrok tunnel
 When developing & testing locally, you'll need to open a tunnel to forward requests to your local development server. These instructions use ngrok.
@@ -60,6 +62,10 @@ In the [Twilio Console](https://console.twilio.com/), go to **Phone Numbers** > 
 
 In your Phone Number configuration settings, update the first **A call comes in** dropdown to **Webhook**, and paste your ngrok forwarding URL (referenced above), followed by `/incoming-call`. For example, `https://[your-ngrok-subdomain].ngrok.app/incoming-call`. Then, click **Save configuration**.
 
+### Astra DB setup
+
+In the [DataStax dashboard](https://astra.datastax.com/), create a vector database. Once the database has been created, create a collection and choose NVIDIA as the vector embeddings provider.
+
 ### Update the .env file
 
 Create a `/env` file, or copy the `.env.example` file to `.env`:
@@ -68,7 +74,15 @@ Create a `/env` file, or copy the `.env.example` file to `.env`:
 cp .env.example .env
 ```
 
-In the .env file, update the `OPENAI_API_KEY` to your OpenAI API key from the **Prerequisites**.
+In the .env file, update the `OPENAI_API_KEY` to your OpenAI API key. Also, gather your Astra DB endpoint, application token and collection name, and fill those in too.
+
+## Ingest the data
+
+Run the ingestion script to download, parse, chunk and embed data from whatever URL you provide:
+
+```
+node ingest.js --url https://en.wikipedia.org/wiki/Taylor_Swift
+```
 
 ## Run the app
 Once ngrok is running, dependencies are installed, Twilio is configured properly, and the `.env` is set up, run the dev server with the following command:
