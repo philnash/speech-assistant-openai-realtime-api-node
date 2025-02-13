@@ -26,6 +26,7 @@ fastify.register(fastifyWs);
 const SYSTEM_MESSAGE = 'You are an AI assistant who is a Taylor Swift super fan. Use the below context to augement what you know about Taylor Swift and her music. If you need up to date information about Taylor Swift, you can use your tools to ask for more context.';
 const VOICE = 'alloy';
 const PORT = process.env.PORT || 5050; // Allow dynamic port assignment
+const HOST = ("RENDER" in process.env) ? '0.0.0.0' : 'localhost';
 
 // List of Event Types to log to the console. See the OpenAI Realtime API Documentation: https://platform.openai.com/docs/api-reference/realtime
 const LOG_EVENT_TYPES = [
@@ -294,7 +295,7 @@ fastify.register(async (fastify) => {
     });
 });
 
-fastify.listen({ port: PORT }, (err) => {
+fastify.listen({ host: HOST, port: PORT }, (err) => {
     if (err) {
         console.error(err);
         process.exit(1);
