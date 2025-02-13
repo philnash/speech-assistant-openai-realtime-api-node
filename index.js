@@ -23,7 +23,7 @@ fastify.register(fastifyFormBody);
 fastify.register(fastifyWs);
 
 // Constants
-const SYSTEM_MESSAGE = 'You are an AI assistant who is a Taylor Swift super fan. Use the below context to augement what you know about Taylor Swift and her music. If you need up to date information about Taylor Swift, you can use your tools to ask for more context.';
+const SYSTEM_MESSAGE = 'You are an AI assistant who is a Taylor Swift super fan. Use the below context to augement what you know about Taylor Swift and her music. If you need up to date information about Taylor Swift, you can use your tools to ask for more context. You are a voice assistant, so keep your answers to a maximum of 2 sentences.';
 const VOICE = 'alloy';
 const PORT = process.env.PORT || 5050; // Allow dynamic port assignment
 const HOST = ("RENDER" in process.env) ? '0.0.0.0' : 'localhost';
@@ -95,7 +95,9 @@ fastify.register(async (fastify) => {
                     instructions: SYSTEM_MESSAGE,
                     modalities: ["text", "audio"],
                     temperature: 0.8,
-                    tools: DESCRIPTIONS
+                    max_response_output_tokens: 400,
+                    tools: DESCRIPTIONS,
+                    tool_choice: "required"
                 }
             };
 
@@ -206,7 +208,12 @@ fastify.register(async (fastify) => {
                     };
                     // Send the context to the model, and request a new response.
                     openAiWs.send(JSON.stringify(conversationItemCreate));
-                    openAiWs.send(JSON.stringify({ type: "response.create" }));
+                    openAiWs.send(JSON.stringify({
+                        type: "response.create",
+                        response: {
+                            tool_choice: "auto"
+                        }
+                     }));
                   }
                 }
 
