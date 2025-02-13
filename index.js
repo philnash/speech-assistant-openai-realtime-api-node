@@ -4,6 +4,8 @@ import dotenv from 'dotenv';
 import fastifyFormBody from '@fastify/formbody';
 import fastifyWs from '@fastify/websocket';
 
+import { DESCRIPTIONS, TOOLS } from "./tools.js";
+
 // Load environment variables from .env file
 dotenv.config();
 
@@ -21,7 +23,7 @@ fastify.register(fastifyFormBody);
 fastify.register(fastifyWs);
 
 // Constants
-const SYSTEM_MESSAGE = 'You are a helpful and bubbly AI assistant who loves to chat about anything the user is interested about and is prepared to offer them facts. You have a penchant for dad jokes, owl jokes, and rickrolling – subtly. Always stay positive, but work in a joke when appropriate.';
+const SYSTEM_MESSAGE = 'You are an AI assistant who is a Taylor Swift super fan. Use the below context to augement what you know about Taylor Swift and her music. If you need up to date information about Taylor Swift, you can use your tools to ask for more context.';
 const VOICE = 'alloy';
 const PORT = process.env.PORT || 5050; // Allow dynamic port assignment
 
@@ -92,6 +94,7 @@ fastify.register(async (fastify) => {
                     instructions: SYSTEM_MESSAGE,
                     modalities: ["text", "audio"],
                     temperature: 0.8,
+                    tools: DESCRIPTIONS
                 }
             };
 
@@ -172,12 +175,38 @@ fastify.register(async (fastify) => {
         });
 
         // Listen for messages from the OpenAI WebSocket (and send to Twilio if necessary)
-        openAiWs.on('message', (data) => {
+        openAiWs.on('message', async (data) => {
             try {
                 const response = JSON.parse(data);
 
                 if (LOG_EVENT_TYPES.includes(response.type)) {
                     console.log(`Received event: ${response.type}`, response);
+                }
+
+                if (response.type === "response.done") {
+                  const outputs = response.response.output;
+                  const functionCall = outputs.find(
+                    (output) => output.type === "function_call"
+                  );
+                  // If we need to make a function call, look up the function in the TOOLS object.
+                  if (functionCall && TOOLS[functionCall.name]) {
+                    // If there is a tool, call it and wait for the response.
+                    const result = await TOOLS[functionCall.name](
+                      JSON.parse(functionCall.arguments)
+                    );
+                    // Create a conversation item with the result of the function call.
+                    const conversationItemCreate = {
+                      type: "conversation.item.create",
+                      item: {
+                        type: "function_call_output",
+                        call_id: functionCall.call_id,
+                        output: result,
+                      },
+                    };
+                    // Send the context to the model, and request a new response.
+                    openAiWs.send(JSON.stringify(conversationItemCreate));
+                    openAiWs.send(JSON.stringify({ type: "response.create" }));
+                  }
                 }
 
                 if (response.type === 'response.audio.delta' && response.delta) {
