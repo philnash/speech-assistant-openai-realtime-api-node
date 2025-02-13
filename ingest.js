@@ -1,10 +1,17 @@
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import { Readability } from "@mozilla/readability";
 import { JSDOM } from "jsdom";
+import OpenAI from "openai";
 
 import { collection } from "./db.js";
 
 import { parseArgs } from "node:util";
+
+const { OPENAI_API_KEY } = process.env;
+
+const openai = new OpenAI({
+  apiKey: OPENAI_API_KEY,
+});
 
 const { values } = parseArgs({
   args: process.argv.slice(2),
@@ -23,8 +30,17 @@ const splitter = new RecursiveCharacterTextSplitter({
   chunkOverlap: 100,
 });
 
-const docs = (await splitter.splitText(article.textContent)).map((chunk) => ({
-  $vectorize: chunk,
-}));
+const docs = (await splitter.splitText(article.textContent)).map(async (chunk) => {
+  const embedding = await openai.embeddings.create({
+    model: "text-embedding-3-small",
+    input: chunk,
+    encoding_format: "float",
+  });
+
+  const vector = embedding.data[0].embedding;
+  return {
+    text: chunk,
+    $vector: vector,
+  }});
 
 await collection.insertMany(docs);

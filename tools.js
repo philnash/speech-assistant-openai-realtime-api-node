@@ -1,11 +1,26 @@
 import { collection } from "./db.js";
+import OpenAI from "openai";
+
+const { OPENAI_API_KEY } = process.env;
+
+const openai = new OpenAI({
+  apiKey: OPENAI_API_KEY,
+});
 
 async function taylorSwiftFacts({ query }) {
+  console.log("TOOL USE. Query: ", query);
+  const embedding = await openai.embeddings.create({
+    model: "text-embedding-3-small",
+    input: query,
+    encoding_format: "float",
+  });
   const docs = await collection.find(
     {},
-    { $vectorize: query, limit: 10, projection: { $vectorize: 1 } }
+    { sort: { $vector: embedding.data[0].embedding }, limit: 10 }
   );
-  return (await docs.toArray()).map((doc) => doc.$vectorize).join("\n");
+  const result = (await docs.toArray()).map((doc) => doc.text).join("\n");
+  console.log(result);
+  return result;
 }
 
 export const DESCRIPTIONS = [
@@ -13,7 +28,7 @@ export const DESCRIPTIONS = [
     type: "function",
     name: "taylorSwiftFacts",
     description:
-      "Search for up to date information about Taylor Swift from her wikipedia page",
+      "Discover facts, up to date data, and additional information about Taylor Swift, her life and her shows, that you don't already know",
     parameters: {
       type: "object",
       properties: {
