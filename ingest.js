@@ -30,7 +30,7 @@ const splitter = new RecursiveCharacterTextSplitter({
   chunkOverlap: 100,
 });
 
-const docs = (await splitter.splitText(article.textContent)).map(async (chunk) => {
+const docs = await Promise.all((await splitter.splitText(article.textContent)).map(async (chunk) => {
   const embedding = await openai.embeddings.create({
     model: "text-embedding-3-small",
     input: chunk,
@@ -40,7 +40,8 @@ const docs = (await splitter.splitText(article.textContent)).map(async (chunk) =
   const vector = embedding.data[0].embedding;
   return {
     text: chunk,
-    $vector: vector,
-  }});
+    $vectorize: vector,
+  }}
+));
 
 await collection.insertMany(docs);
